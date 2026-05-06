@@ -22,5 +22,4 @@ public class EnvironmentController {
         environmentService.deleteEnvironment(environmentId);
         return ResponseEntity.ok("Environment " + environmentId + " deleted successfully");
     }
-
 }

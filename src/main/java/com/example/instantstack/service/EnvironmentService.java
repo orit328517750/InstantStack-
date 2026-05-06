@@ -18,7 +18,7 @@ public class EnvironmentService {
 
     // פונקציה ליצירת סביבה מאפס - מרכזת את כל השלבים
     @Transactional
-    public void createAndStartEnvironment(Project project) {
+    public Environment createAndStartEnvironment(Project project) {
         Environment env = new Environment();
         env.setPort(findNextAvailablePort());
         env.setStatus(Environment.Status.STARTING);
@@ -27,6 +27,7 @@ public class EnvironmentService {
         // שמירה ראשונית כדי לקבל ID
         env = environmentRepository.save(env);
 
+
         try {
             startDockerContainer(env);
         } catch (Exception e) {
@@ -34,7 +35,7 @@ public class EnvironmentService {
             environmentRepository.save(env);
             throw new RuntimeException("Docker failed: " + e.getMessage());
         }
-//        return env;
+        return env;
     }
 
     public void deleteEnvironment(Long id) {

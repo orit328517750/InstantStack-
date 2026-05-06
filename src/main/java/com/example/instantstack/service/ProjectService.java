@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -25,14 +26,42 @@ public class ProjectService {
 
     public Project getProjectByID(Long id) {
         return projectRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("project not found"));
+                .orElseThrow(() -> new RuntimeException("Project with ID " + id + " was not found."));
     }
 
     public void addProject(Project project) {
+        // בדיקת תקינות לפני שמירה
+        if (project.getName() == null || project.getName().trim().isEmpty()) {
+            throw new RuntimeException("Project name cannot be empty.");
+        }
         if (projectRepository.existsByName(project.getName())) {
-            throw new RuntimeException("project already exists");
+            throw new RuntimeException("Project with name '" + project.getName() + "' already exists.");
         }
         projectRepository.save(project);
+    }
+
+    @Transactional
+    public void deleteProject(Long projectId) {
+        Project project = getProjectByID(projectId);
+
+        /*
+         * 2. ניקוי משאבים חיצוניים (Docker):
+
+         */
+        if (project.getEnvironments() != null) {
+            // יצירת עותק של הרשימה כדי למנוע ConcurrentModificationException בזמן מחיקה
+            List<Environment> envsToDelete = new ArrayList<>(project.getEnvironments());
+            for (Environment env : envsToDelete) {
+                environmentService.deleteEnvironment(env.getId());
+            }
+        }
+
+        /*
+         * 3. מחיקת הפרויקט עצמו:
+         * בגלל שהשתמשנו ב-environmentService.deleteEnvironment לכל סביבה,
+         * הקשרים כבר נותקו. כעת נמחק את הפרויקט מה-Repository.
+         */
+        projectRepository.delete(project);
     }
 
     public void updateProject(Project project) {
@@ -44,23 +73,23 @@ public class ProjectService {
 
     // ניהול סביבות בתוך פרויקט
     @Transactional
-    public void createAndStartEnvironment(Long projectId) {
+    public Environment createAndStartEnvironment(Long projectId) {
         Project project = getProjectByID(projectId);
-        // קורא לסרביס של הסביבה שיעשה את העבודה "השחורה"
-        environmentService.createAndStartEnvironment(project);
+        Environment env= environmentService.createAndStartEnvironment(project);
+        return env;
     }
 
     @Transactional
     public void deleteEnvironmentFromProject(Long environmentId, Long projectId) {
-        // 1. נביא את הסביבה
+        // 1. נביא את הסביבה - אם לא קיימת, environmentService יזרוק שגיאה
         Environment environment = environmentService.getEnvironmentByID(environmentId);
 
-        // 2. בדיקת שייכות בלבד
+        // 2. וידוא שהסביבה באמת שייכת לפרויקט שצוין ב-URL
         if (environment.getProject() == null || !environment.getProject().getId().equals(projectId)) {
             throw new RuntimeException("Environment " + environmentId + " does not belong to project " + projectId);
         }
 
-        // 3. פשוט קוראים למחיקה - היא כבר תטפל בניתוק הקשר ובמחיקת ה-DB
+        // 3. מחיקה
         environmentService.deleteEnvironment(environmentId);
     }
 
