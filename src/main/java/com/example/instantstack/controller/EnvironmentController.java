@@ -6,6 +6,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("api/environments")
 @CrossOrigin(origins = "*")
@@ -17,9 +19,20 @@ public class EnvironmentController {
     public ResponseEntity<Environment> getEnvironmentById(@PathVariable Long environmentId) {
         return ResponseEntity.ok(environmentService.getEnvironmentByID(environmentId));
     }
+    @GetMapping
+    public ResponseEntity<List<Environment>> getEnvironments() {
+       return ResponseEntity.ok(environmentService.getAllEnvironments());
+    }
     @DeleteMapping("/{environmentId}")
     public ResponseEntity<String> deleteEnvironment(@PathVariable Long environmentId) {
         environmentService.deleteEnvironment(environmentId);
         return ResponseEntity.ok("Environment " + environmentId + " deleted successfully");
     }
+
+    @PutMapping("/{environmentId}")
+    public ResponseEntity<String> updateEnvironment(@PathVariable Long environmentId, @RequestBody Environment environment) {
+        environmentService.updateEnvironment(environmentId, environment);
+        return ResponseEntity.ok("Environment " + environmentId + " updated successfully");
+    }
+
 }

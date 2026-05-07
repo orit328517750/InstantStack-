@@ -7,6 +7,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 @Service
 public class EnvironmentService {
 
@@ -18,15 +20,15 @@ public class EnvironmentService {
 
     // פונקציה ליצירת סביבה מאפס - מרכזת את כל השלבים
     @Transactional
-    public Environment createAndStartEnvironment(Project project) {
+    public Environment createAndStartEnvironment(Project project,Long workerId) {
         Environment env = new Environment();
         env.setPort(findNextAvailablePort());
         env.setStatus(Environment.Status.STARTING);
         env.setProject(project);
+        env.setWorkerId(workerId);
 
         // שמירה ראשונית כדי לקבל ID
         env = environmentRepository.save(env);
-
 
         try {
             startDockerContainer(env);
@@ -36,6 +38,10 @@ public class EnvironmentService {
             throw new RuntimeException("Docker failed: " + e.getMessage());
         }
         return env;
+    }
+
+    public List<Environment> getAllEnvironments() {
+         return  environmentRepository.findAll();
     }
 
     public void deleteEnvironment(Long id) {
@@ -48,6 +54,16 @@ public class EnvironmentService {
         }
         stopAndRemoveContainer(id);
         environmentRepository.deleteById(id);
+    }
+
+    public void updateEnvironment(Long id,Environment envDetails) {
+        Environment env = environmentRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Environment not found"));
+
+        env.setStatus(envDetails.getStatus());
+        env.setProject(envDetails.getProject());
+        env.setPort(envDetails.getPort());
+        environmentRepository.save(env);
     }
 
     public Environment getEnvironmentByID(Long id) {
@@ -103,4 +119,8 @@ public class EnvironmentService {
         env.setStatus(newStatus);
         environmentRepository.save(env);
     }
+    public List<Environment> getEnvironmentsForWorker(Long workerId) {
+        return environmentRepository.findByWorkerId(workerId);
+    }
+
 }

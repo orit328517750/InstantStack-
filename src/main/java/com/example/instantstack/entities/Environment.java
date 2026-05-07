@@ -25,6 +25,7 @@ public class Environment {
     @JoinColumn(name = "project_id") // הגדרה מפורשת של עמודת הקשר
     @JsonIgnore
     private Project project;
+    private Long workerId;
 
     public enum Status {
         PENDING,   // בהמתנה/יצירה

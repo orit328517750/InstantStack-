@@ -22,4 +22,5 @@ public class Project {
     @OneToMany(mappedBy = "project", cascade = CascadeType.ALL)
     @Builder.Default
     private List<Environment> environments = new ArrayList<>();
+    private Long managerId;
 }

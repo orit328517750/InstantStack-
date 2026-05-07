@@ -20,7 +20,7 @@ public class ProjectController {
 
     // יצירת פרויקט חדש - חובה להריץ את זה פעם אחת בכל פעם שהשרת עולה!
     @PostMapping
-    public ResponseEntity<String> createProject(@RequestBody com.example.instantstack.entities.Project project) {
+    public ResponseEntity<String> createProject(@RequestBody Project project) {
         projectService.addProject(project);
         return ResponseEntity.ok("Project '" + project.getName() + "' created successfully!");
     }
@@ -31,20 +31,22 @@ public class ProjectController {
         return ResponseEntity.ok("Project " + projectId + " and all its resources were cleared.");
     }
 
-    // הצגת כל הפרויקטים (מעולה לבדיקה בפוסטמן לראות מה ה-ID שנוצר)
-    // GET http://localhost:8080/api/projects
+    // הצגת פרויקטים - תומך בסינון לפי מנהל או הצגת הכל (עבור Admin)
+    // GET http://localhost:8080/api/projects?managerId=1
     @GetMapping
-    public ResponseEntity<List<Project>> getAllProjects() {
+    public ResponseEntity<List<Project>> getProjects(@RequestParam(required = false) Long managerId) {
+        if (managerId != null) {
+            return ResponseEntity.ok(projectService.getProjectsByManager(managerId));
+        }
         return ResponseEntity.ok(projectService.getAllProjects());
     }
-
 
 
     // 1. יצירת סביבה חדשה (והפעלת דוקר)
     // אם projectId לא קיים, ה-Service יזרוק Exception שייתפס ב-GlobalHandler.
     @PostMapping("/{projectId}/environments")
-    public ResponseEntity<Environment> createEnvironment(@PathVariable Long projectId) {
-        Environment env= projectService.createAndStartEnvironment(projectId);
+    public ResponseEntity<Environment> createEnvironment(@PathVariable Long projectId,@RequestParam Long workerId) {
+        Environment env= projectService.createAndStartEnvironment(projectId,workerId);
         return ResponseEntity.status(HttpStatus.CREATED).body(env);
     }
 

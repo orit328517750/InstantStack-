@@ -30,13 +30,22 @@ public class ProjectService {
     }
 
     public void addProject(Project project) {
-        // בדיקת תקינות לפני שמירה
+        // 1. בדיקת שם
         if (project.getName() == null || project.getName().trim().isEmpty()) {
             throw new RuntimeException("Project name cannot be empty.");
         }
+
+        // 2. בדיקה שהוזן מנהל (חשוב!)
+        if (project.getManagerId() == null) {
+            throw new RuntimeException("Project must have a Manager ID.");
+        }
+
+        // 3. בדיקת כפילות שם
         if (projectRepository.existsByName(project.getName())) {
             throw new RuntimeException("Project with name '" + project.getName() + "' already exists.");
         }
+
+        // 4. שמירה (ה-managerId כבר בפנים)
         projectRepository.save(project);
     }
 
@@ -73,9 +82,9 @@ public class ProjectService {
 
     // ניהול סביבות בתוך פרויקט
     @Transactional
-    public Environment createAndStartEnvironment(Long projectId) {
+    public Environment createAndStartEnvironment(Long projectId,Long workerId) {
         Project project = getProjectByID(projectId);
-        Environment env= environmentService.createAndStartEnvironment(project);
+        Environment env= environmentService.createAndStartEnvironment(project,workerId);
         return env;
     }
 
@@ -102,4 +111,11 @@ public class ProjectService {
     public Environment getEnvironmentByID(Long environmentId) {
         return environmentService.getEnvironmentByID(environmentId);
     }
+
+    // מנהל חברה רואה רק את הפרויקטים שלו
+    public List<Project> getProjectsByManager(Long managerId) {
+        return projectRepository.findByManagerId(managerId);
+    }
+
+
 }
