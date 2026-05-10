@@ -24,4 +24,11 @@ public class GlobalExceptionHandler {
         error.put("massage","server error, please try again/later");
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
     }
+
+    @ExceptionHandler(AuthException.class)
+    public ResponseEntity<Map<String, String>> handleAuthException(AuthException ex) {
+        Map<String, String> error = new HashMap<>();
+        error.put("message", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error); // מחזיר 401
+    }
 }

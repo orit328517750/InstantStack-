@@ -197,3 +197,12 @@ create global temporary table HTE_app_user(rn_ integer not null, id bigint, emai
 2026-05-10 00:28:11.123432+03:00 jdbc[37]: exception
 org.h2.jdbc.JdbcSQLSyntaxErrorException: Table "HTE_APP_USER" already exists; SQL statement:
 create global temporary table HTE_app_user(rn_ integer not null, id bigint, email varchar(255), name varchar(255), password varchar(255), role enum ('Admin','Employee','Manager'), primary key (rn_)) transactional [42101-240]
+2026-05-10 14:42:30.246000+03:00 jdbc[16]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Table "HTE_APP_USER" already exists; SQL statement:
+create global temporary table HTE_app_user(rn_ integer not null, id bigint, email varchar(255), name varchar(255), password varchar(255), role enum ('Admin','Employee','Manager'), primary key (rn_)) transactional [42101-240]
+2026-05-10 14:42:33.705982+03:00 jdbc[26]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Table "HTE_APP_USER" already exists; SQL statement:
+create global temporary table HTE_app_user(rn_ integer not null, id bigint, email varchar(255), name varchar(255), password varchar(255), role enum ('Admin','Employee','Manager'), primary key (rn_)) transactional [42101-240]
+2026-05-10 14:49:23.471906+03:00 jdbc[36]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Table "HTE_APP_USER" already exists; SQL statement:
+create global temporary table HTE_app_user(rn_ integer not null, id bigint, email varchar(255), name varchar(255), password varchar(255), role enum ('Admin','Employee','Manager'), primary key (rn_)) transactional [42101-240]
