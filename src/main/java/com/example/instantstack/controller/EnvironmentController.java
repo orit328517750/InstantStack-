@@ -42,14 +42,6 @@ public class EnvironmentController {
         environmentService.updateEnvironment(environmentId, environment);
         return ResponseEntity.ok("Environment " + environmentId + " updated successfully");
     }
-//    @PostMapping
-//    public ResponseEntity<Environment> createEnvironment(@RequestParam Long projectId, @RequestParam Long workerId) {
-//        // שליפת הפרויקט מה-DB כדי לוודא שהוא קיים
-//        Project project = projectRepository.findById(projectId)
-//                .orElseThrow(() -> new RuntimeException("Project not found with id: " + projectId));
-//        // קריאה לסרוויס שיצרת שמפעיל גם את הדוקר
-//        Environment newEnv = environmentService.createAndStartEnvironment(project, workerId);
-//        return ResponseEntity.ok(newEnv);
-//    }
+
 
 }

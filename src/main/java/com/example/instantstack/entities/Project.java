@@ -23,4 +23,7 @@ public class Project {
     @Builder.Default
     private List<Environment> environments = new ArrayList<>();
     private Long managerId;
+    private String gitUrl;
+    private Integer expectedPort; // הפורט הפנימי שהאפליקציה בתוך הדוקר מקשיבה לו (למשל 8080 או 3000)
+
 }
