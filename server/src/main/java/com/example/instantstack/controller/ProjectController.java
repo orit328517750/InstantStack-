@@ -34,6 +34,13 @@ public class ProjectController {
         return ResponseEntity.ok("Project updated successfully.");
     }
 
+    @PutMapping("/{projectId}/workers/{workerId}")
+    @PreAuthorize("hasAnyRole('Admin', 'Manager')")
+    public ResponseEntity<String> addWorkerToProject(@PathVariable Long projectId, @PathVariable Long workerId) {
+        projectService.addWorkerToProject(projectId, workerId);
+        return ResponseEntity.ok("Worker " + workerId + " added to project " + projectId);
+    }
+
     @DeleteMapping("/{projectId}")
     @PreAuthorize("hasAnyRole('Admin','Manager')")
     public ResponseEntity<String> deleteProject(@PathVariable Long projectId) {
@@ -44,7 +51,8 @@ public class ProjectController {
     // הצגת פרויקטים - תומך בסינון לפי מנהל או הצגת הכל (עבור Admin)
     // GET http://localhost:8080/api/projects?managerId=1
     @GetMapping
-    @PreAuthorize("hasAnyRole('Admin','Manager')")
+    //אורית
+    @PreAuthorize("hasAnyRole('Admin','Manager','Employee')")
     public ResponseEntity<List<Project>> getProjects(@RequestParam(required = false) Long managerId) {
         if (managerId != null) {
             return ResponseEntity.ok(projectService.getProjectsByManager(managerId));

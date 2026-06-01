@@ -25,7 +25,6 @@ public class CleanupService {
     public void deleteExpiredEnvironments() {
         // מחק כל מה שנוצר לפני יותר מ-2 שעות
         LocalDateTime threshold = LocalDateTime.now().minusHours(2);
-
         System.out.println("Cleanup Task: Checking for environments created before " + threshold);
 
         List<Environment> expiredEnvs = environmentRepository.findByCreatedAtBefore(threshold);
@@ -37,7 +36,7 @@ public class CleanupService {
         for (Environment env : expiredEnvs) {
             try {
                 System.out.println("Auto-deleting expired environment ID: " + env.getId());
-                environmentService.deleteEnvironment(env.getId());
+                environmentService.deleteEnvironment(env.getId(),true);
             } catch (Exception e) {
                 // מדפיס את השגיאה המלאה כדי שנוכל לדבג אם משהו משתבש
                 System.err.println("Failed to auto-delete env " + env.getId() + ": " + e.getMessage());

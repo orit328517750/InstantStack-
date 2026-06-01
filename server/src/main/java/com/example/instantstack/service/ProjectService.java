@@ -33,10 +33,15 @@ public class ProjectService {
         if (currentUser.getRole() == AppUser.Role.Admin) {
             return projectRepository.findAll();
         }
+        //אורית
+        if (currentUser.getRole() == AppUser.Role.Employee) {
+            return getProjectsByWorker(currentUser.getId());
+        }
 
         // אם הוא מנהל - הוא רואה רק את הפרויקטים שלו
         return projectRepository.findByManagerId(currentUser.getId());
     }
+
 
     public Project getProjectByID(Long id) {
         return projectRepository.findById(id)
@@ -88,7 +93,7 @@ public class ProjectService {
             // יצירת עותק של הרשימה כדי למנוע ConcurrentModificationException בזמן מחיקה
             List<Environment> envsToDelete = new ArrayList<>(project.getEnvironments());
             for (Environment env : envsToDelete) {
-                environmentService.deleteEnvironment(env.getId());
+                environmentService.deleteEnvironment(env.getId(),false);
             }
         }
 
@@ -126,7 +131,7 @@ public class ProjectService {
         }
 
         // 3. מחיקה
-        environmentService.deleteEnvironment(environmentId);
+        environmentService.deleteEnvironment(environmentId,false);
     }
 
     public List<Environment> getEnvironmentsByProject(Project project) {
@@ -149,5 +154,21 @@ public class ProjectService {
         return projectRepository.findByManagerId(managerId);
     }
 
+    //אורית
+    public List<Project> getProjectsByWorker(Long workerId) {
+        //מביא את כל הפרויקטים לעובד מסויין
+        return projectRepository.findByWorkerIdsContaining(workerId);
+    }
+
+    public void addWorkerToProject(Long projectId, Long workerId) {
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new RuntimeException("project not found"));
+
+        if (!project.getWorkerIds().contains(workerId)) {
+            project.getWorkerIds().add(workerId);
+        }
+
+        projectRepository.save(project);
+    }
 
 }

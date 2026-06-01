@@ -32,7 +32,7 @@ public class EnvironmentController {
     @DeleteMapping("/{environmentId}")
     @PreAuthorize("hasAnyRole('Admin', 'Manager', 'Employee')")
     public ResponseEntity<String> deleteEnvironment(@PathVariable Long environmentId) {
-        environmentService.deleteEnvironment(environmentId);
+        environmentService.deleteEnvironment(environmentId,false);
         return ResponseEntity.ok("Environment " + environmentId + " deleted successfully");
     }
 
