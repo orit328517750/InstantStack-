@@ -24,7 +24,11 @@ public class CleanupService {
     @Transactional // פותר את שגיאת ה-LazyInitializationException (no session)
     public void deleteExpiredEnvironments() {
         // מחק כל מה שנוצר לפני יותר מ-2 שעות
-        LocalDateTime threshold = LocalDateTime.now().minusHours(2);
+        //LocalDateTime threshold = LocalDateTime.now().minusHours(2);
+        // במקום: LocalDateTime threshold = LocalDateTime.now().minusHours(2);
+// השתמשו בזמן UTC שתואם ל-Database:
+        java.time.ZonedDateTime nowInUTC = java.time.ZonedDateTime.now(java.time.ZoneOffset.UTC);
+        LocalDateTime threshold = nowInUTC.minusHours(2).toLocalDateTime();
         System.out.println("Cleanup Task: Checking for environments created before " + threshold);
 
         List<Environment> expiredEnvs = environmentRepository.findByCreatedAtBefore(threshold);

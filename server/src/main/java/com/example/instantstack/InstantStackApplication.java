@@ -10,6 +10,8 @@ public class InstantStackApplication {
 
     public static void main(String[] args) {
         SpringApplication.run(InstantStackApplication.class, args);
+
+        
     }
 
 }
