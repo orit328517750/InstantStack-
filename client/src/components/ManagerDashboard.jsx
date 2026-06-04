@@ -108,7 +108,10 @@ export default function ManagerDashboard({ onLogout }) {
   };
 
   const handleOpenApp = (port) => {
-    window.open(`http://localhost:${port}`, '_blank');
+    if (!port) return;
+    const host = window.location.hostname || 'localhost';
+    const url = `${window.location.protocol}//${host}:${port}`;
+    window.open(url, '_blank');
   };
 
   const handleDeleteEnvironment = async (projectId, envId) => {
@@ -150,7 +153,13 @@ export default function ManagerDashboard({ onLogout }) {
       await api.updateProject(updatedProjectData);
       closeEditModal();
       alert('Project Git URL updated successfully.');
-      await loadDashboardData(); 
+      await loadDashboardData();
+      try {
+        const updatedProject = await api.getProject(projectId);
+        console.log('Updated project after assignment:', updatedProject);
+      } catch (e) {
+        console.warn('Could not fetch single project after assignment', e);
+      }
     } catch (err) {
       alert(`Update failed: ${err.message}`);
     } finally {
@@ -160,16 +169,26 @@ export default function ManagerDashboard({ onLogout }) {
 
   const handleAssignWorker = async (e) => {
     e.preventDefault();
-    if (!selectedProject || !selectedWorker) return;
+    if (!selectedProject || !selectedWorker) {
+      alert('Please select both a project and an employee.');
+      return;
+    }
     setAssignLoading(true);
     setAssignSuccess('');
     try {
-      const responseMessage = await api.assignWorkerToProject(selectedProject, selectedWorker);
+      const projectId = Number(selectedProject);
+      const workerId = Number(selectedWorker);
+      console.log('Assigning worker to project', { projectId, workerId });
+      const responseMessage = await api.assignWorkerToProject(projectId, workerId);
+      console.log('Assignment response:', responseMessage);
       setAssignSuccess(responseMessage || 'Worker node successfully mounted to project cluster.');
+      setSelectedProject('');
       setSelectedWorker('');
-      await loadDashboardData(); 
+      setTimeout(() => setAssignSuccess(''), 3000);
+      await loadDashboardData();
     } catch (err) {
-      alert(`Assignment failed: ${err.message}`);
+      console.error('Assignment failed', err);
+      alert(`Assignment failed: ${err.message || err}`);
     } finally {
       setAssignLoading(false);
     }
@@ -246,7 +265,8 @@ export default function ManagerDashboard({ onLogout }) {
                 {projects.map((project) => {
                   const isExpanded = expandedProjects[project.id];
                   const envs = environmentsByProject[project.id] || [];
-                  const runningEnvs = envs.filter((e) => e.status === 'RUNNING');
+                  const visibleEnvs = envs.filter((e) => e && e.status != null);
+                  const runningEnvs = visibleEnvs.filter((e) => String(e.status || '').toUpperCase() === 'RUNNING');
 
                   return (
                     <div key={project.id} className="border border-slate-900 bg-[#0c0d19]/60 rounded-xl overflow-hidden transition-all">
@@ -277,31 +297,43 @@ export default function ManagerDashboard({ onLogout }) {
                             variant="secondary"
                             className="bg-slate-900 border border-slate-800 text-slate-300 hover:bg-slate-800 rounded-lg text-xs h-8"
                           >
-                            {isExpanded ? <ChevronUp className="w-4 h-4" /> : `Inspect Core (${runningEnvs.length})`}
+                            {isExpanded ? <ChevronUp className="w-4 h-4" /> : `Inspect Core (${visibleEnvs.length})`}
                           </Button>
                         </div>
                       </div>
 
                       {isExpanded && (
                         <div className="p-4 border-t border-slate-900 bg-slate-950/40">
-                          {runningEnvs.length === 0 ? (
+                          {visibleEnvs.length === 0 ? (
                             <div className="text-xs font-mono text-slate-500 p-2 flex items-center gap-2">
-                              <Terminal className="w-3.5 h-3.5 text-slate-600" /> No running environment context found for this stack.
+                              <Terminal className="w-3.5 h-3.5 text-slate-600" /> No environment context found for this stack.
                             </div>
                           ) : (
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                              {runningEnvs.map((env) => (
-                                <div key={env.id} className="flex items-center justify-between p-3 bg-slate-900/40 border border-slate-800/60 rounded-xl">
-                                  <div>
-                                    <div className="text-xs font-mono text-emerald-400 font-bold mb-1">PORT INTERFACE: {env.port}</div>
-                                    <div className="text-[11px] text-slate-400 font-mono">Assigned Worker ID: {env.workerId || 'None'}</div>
+                              {visibleEnvs.map((env) => {
+                                const isRunning = String(env.status || '').toUpperCase() === 'RUNNING';
+                                return (
+                                  <div key={env.id} className="flex items-center justify-between p-3 bg-slate-900/40 border border-slate-800/60 rounded-xl">
+                                    <div>
+                                      <div className="text-xs font-mono text-emerald-400 font-bold mb-1">PORT INTERFACE: {env.port || 'N/A'}</div>
+                                      <div className="text-[11px] text-slate-400 font-mono">Assigned Worker ID: {env.workerId || 'None'}</div>
+                                      <div className="text-[11px] mt-1 font-mono">
+                                        Status: <span className={isRunning ? 'text-emerald-400' : 'text-slate-400'}>{env.status || 'UNKNOWN'}</span>
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-1.5">
+                                      <Button
+                                        onClick={() => handleOpenApp(env.port)}
+                                        className={`rounded-lg h-7 px-2.5 text-xs ${isRunning ? 'bg-blue-600 hover:bg-blue-500 text-white' : 'bg-slate-800 text-slate-400 cursor-not-allowed'}`}
+                                        disabled={!isRunning || !env.port}
+                                      >
+                                        Navigate
+                                      </Button>
+                                      <Button onClick={() => handleDeleteEnvironment(project.id, env.id)} className="bg-red-950/20 text-red-400 border border-red-900/30 hover:bg-red-600 hover:text-white rounded-lg h-7 w-7 p-0 flex items-center justify-center"><Trash2 className="w-3.5 h-3.5" /></Button>
+                                    </div>
                                   </div>
-                                  <div className="flex items-center gap-1.5">
-                                    <Button onClick={() => handleOpenApp(env.port)} className="bg-blue-600 hover:bg-blue-500 text-white rounded-lg h-7 px-2.5 text-xs">Navigate</Button>
-                                    <Button onClick={() => handleDeleteEnvironment(project.id, env.id)} className="bg-red-950/20 text-red-400 border border-red-900/30 hover:bg-red-600 hover:text-white rounded-lg h-7 w-7 p-0 flex items-center justify-center"><Trash2 className="w-3.5 h-3.5" /></Button>
-                                  </div>
-                                </div>
-                              ))}
+                                );
+                              })}
                             </div>
                           )}
                         </div>

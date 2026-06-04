@@ -509,6 +509,7 @@ public class EnvironmentService {
         // שמירה ראשונית כדי לקבל ID
         env = environmentRepository.save(env);
 
+
         try {
             String gitUrl = project.getGitUrl();
             if (gitUrl == null || gitUrl.isEmpty()) {
@@ -1061,10 +1062,9 @@ public class EnvironmentService {
         return !environmentRepository.existsByPort(port);
     }
 
+    @Transactional
     public void updateStatus(Long id, Environment.Status newStatus) {
-        Environment env = getEnvironmentByID(id);
-        env.setStatus(newStatus);
-        environmentRepository.save(env);
+        environmentRepository.updateStatus(id, newStatus);
     }
 
     public List<Environment> getEnvironmentsForWorker(Long workerId) {

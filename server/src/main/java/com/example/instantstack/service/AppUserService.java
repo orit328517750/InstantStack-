@@ -62,11 +62,15 @@ public class AppUserService {
             throw new AuthException("Access Denied: You can only update your own profile.");
         }
 
-        AppUser existingUser = appUserRepository.findById(userDetails.getId())
+        AppUser existingUser = appUserRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        existingUser.setName(userDetails.getName());
-        existingUser.setEmail(userDetails.getEmail());
+        if (userDetails.getName() != null && !userDetails.getName().trim().isEmpty()) {
+            existingUser.setName(userDetails.getName());
+        }
+        if (userDetails.getEmail() != null && !userDetails.getEmail().trim().isEmpty()) {
+            existingUser.setEmail(userDetails.getEmail());
+        }
         if (userDetails.getPassword() != null && !userDetails.getPassword().trim().isEmpty()) {
             existingUser.setPassword(passwordEncoder.encode(userDetails.getPassword()));
         }

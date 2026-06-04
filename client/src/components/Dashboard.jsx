@@ -198,23 +198,22 @@ export default function Dashboard({ onLogout }) {
     }
   };
 
-  const handleCreateEnvironment = async (projectId) => {
+ const handleCreateEnvironment = async (projectId) => {
     try {
-      setIsProvisioning(true);
-      console.log(`Starting environment creation for project ${projectId}...`);
-      
-      const newEnv = await api.createEnvironment(projectId, 1);
-      setCurrentEnv(newEnv);
-      
-      // שדרוג: הודעת הצלחה עיצובית במקום אלרט מעיק
-      showNotification(`Success! Environment deployed running on port: ${newEnv.port}`, 'success');
-      loadProjects(); 
+        setIsProvisioning(true);
+        
+        // השרת מחליף את workerId אוטומטית למשתמש המחובר
+        const newEnv = await api.createEnvironment(projectId, 0);
+        setCurrentEnv(newEnv);
+        
+        showNotification(`Success! Environment deployed running on port: ${newEnv.port}`, 'success');
+        loadProjects();
     } catch (err) {
-      showNotification(`Failed to create environment: ${err.message}`, 'error');
+        showNotification(`Failed to create environment: ${err.message}`, 'error');
     } finally {
-      setIsProvisioning(false);
+        setIsProvisioning(false);
     }
-  };
+};
 
   if (loading) return (
     <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-white">

@@ -92,6 +92,22 @@ export const api = {
     return response.json();
   },
 
+  // שליפת מנהלים לפי תפקיד מתוך AppUserController
+async getAvailableManagers() {
+  const token = localStorage.getItem('token');
+  const response = await fetch(`${API_BASE_URL}/Users/role/Manager`, {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch available managers');
+  }
+
+  return response.json();
+},
+
   // ─── Projects ───────────────────────────────────────────
   async getProjects() {
     const token = localStorage.getItem('token');
@@ -107,6 +123,46 @@ export const api = {
 
     return response.json();
   },
+
+  async getProject(projectId) {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`${API_BASE_URL}/projects/${projectId}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch project');
+    }
+
+    return response.json();
+  },
+
+  // יצירת פרויקט חדש בשרת - אורית
+  async addProject(projectData) {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`${API_BASE_URL}/projects`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify(projectData),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText || 'Failed to create project');
+    }
+
+    const contentType = response.headers.get('content-type');
+    if (contentType && contentType.includes('application/json')) {
+      return response.json();
+    }
+    return response.text();
+  },
+
 
   // עדכון פרויקט קיים (מפעיל @PutMapping ב-ProjectController בג'אווה)
   async updateProject(projectData) {
@@ -154,7 +210,6 @@ export const api = {
     const response = await fetch(url, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`,
       },
     });
@@ -243,17 +298,60 @@ export const api = {
     if (!response.ok) throw new Error('Failed to delete project');
     return response.text();
   },
-  // הוסיפי את אלו לתוך אובייקט ה-api ב-api.js:
-async updateUser(userData) {
-  const token = localStorage.getItem('token');
-  const response = await fetch(`${API_BASE_URL}/Users/${userData.id}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-    body: JSON.stringify(userData),
-  });
-  if (!response.ok) throw new Error('Failed to update user');
-  return response.json();
-},
+
+  // עדכון פרטי משתמש (שם ואימייל בלבד)
+  async updateUserDetails(userId, userData) {
+    const token = localStorage.getItem('token');
+    const url = `${API_BASE_URL}/Users/${userId}`;
+    const response = await fetch(url, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify(userData),
+    });
+
+    const contentType = response.headers.get('content-type');
+    const responseText = await response.text();
+
+    if (!response.ok) {
+      throw new Error(responseText || 'Failed to update user details');
+    }
+
+    if (contentType && contentType.includes('application/json')) {
+      return JSON.parse(responseText);
+    }
+
+    return responseText;
+  },
+
+  // עדכון תפקיד משתמש
+  async updateUserRole(userId, newRole) {
+    const token = localStorage.getItem('token');
+    const url = `${API_BASE_URL}/Users/${userId}/role`;
+    const response = await fetch(url, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify(newRole),
+    });
+
+    const contentType = response.headers.get('content-type');
+    const responseText = await response.text();
+
+    if (!response.ok) {
+      throw new Error(responseText || 'Failed to update user role');
+    }
+
+    if (contentType && contentType.includes('application/json')) {
+      return JSON.parse(responseText);
+    }
+
+    return responseText;
+  },
   
   // ────────────────────────────────────────────────────────
 };

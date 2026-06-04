@@ -14,8 +14,16 @@ export default function AdminDashboard({ onLogout }) {
   const [error, setError] = useState('');
 
   const [newUser, setNewUser] = useState({ name: '', email: '', password: '', role: 'Employee' });
+  //אורית
+  const [newProject, setNewProject] = useState({ name: '', managerId: '', gitUrl: '' });
   const [formLoading, setFormLoading] = useState(false);
   const [formSuccess, setFormSuccess] = useState('');
+  const [userError, setUserError] = useState('');
+  const [projectErrors, setProjectErrors] = useState({ name: '', managerId: '', gitUrl: '' });
+  const [managers, setManagers] = useState([]);
+  const [editingUser, setEditingUser] = useState(null);
+  const [editingUserOriginal, setEditingUserOriginal] = useState(null);
+
 
   useEffect(() => {
     loadAdminData();
@@ -27,6 +35,11 @@ export default function AdminDashboard({ onLogout }) {
       const [usersData, projectsData] = await Promise.all([api.getUsers(), api.getProjects()]);
       setUsers(usersData || []);
       setProjects(projectsData || []);
+
+      // שליפת מנהלים זמינים ליצירת פרויקט חדש - אורית
+      const managersData = await api.getAvailableManagers();
+      setManagers(managersData);
+
     } catch (err) {
       setError('Failed to sync system core.');
     } finally {
@@ -36,14 +49,145 @@ export default function AdminDashboard({ onLogout }) {
 
   const handleCreateUser = async (e) => {
     e.preventDefault();
+    setUserError('');
     setFormLoading(true);
     try {
       await api.addUser(newUser);
       setFormSuccess(`User [${newUser.name}] registered successfully.`);
       setNewUser({ name: '', email: '', password: '', role: 'Employee' });
       await loadAdminData();
+      setTimeout(() => setFormSuccess(''), 3000);
     } catch (err) {
-      setError(`Registration failed: ${err.message}`);
+      const msg = err.message || String(err);
+      if (msg.toLowerCase().includes('email') && (msg.toLowerCase().includes('already') || msg.toLowerCase().includes('exists'))) {
+        setUserError('The email already exists in the system.');
+      } else {
+        setUserError(`Registration failed: ${msg}`);
+      }
+    } finally {
+      setFormLoading(false);
+    }
+  };
+
+  const isValidUrl = (value) => {
+    try {
+      new URL(value);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  //אורית
+  const handleCreateProject = async (e) => {
+    e.preventDefault();
+    setError('');
+    setFormSuccess('');
+    setProjectErrors({ name: '', managerId: '', gitUrl: '' });
+
+    if (!newProject.name.trim()) {
+      setProjectErrors((prev) => ({ ...prev, name: 'Project name is required' }));
+      return;
+    }
+
+    if (!newProject.managerId) {
+      setProjectErrors((prev) => ({ ...prev, managerId: 'Manager selection is required' }));
+      return;
+    }
+
+    if (!newProject.gitUrl.trim() || !isValidUrl(newProject.gitUrl.trim())) {
+      setProjectErrors((prev) => ({ ...prev, gitUrl: 'Invalid Git URL' }));
+      return;
+    }
+
+    setFormLoading(true);
+    try {
+      const projectPayload = {
+        ...newProject,
+        managerId: newProject.managerId === '' ? null : Number(newProject.managerId),
+      };
+
+      await api.addProject(projectPayload);
+      setFormSuccess(`Success! Project [${newProject.name}] deployed successfully.`);
+      setNewProject({ name: '', managerId: '', gitUrl: '' });
+      await loadAdminData();
+      setTimeout(() => setFormSuccess(''), 3000);
+    } catch (err) {
+      const msg = err.message || String(err);
+      if (msg.toLowerCase().includes('already') || msg.toLowerCase().includes('exists')) {
+        setProjectErrors((prev) => ({ ...prev, name: 'Project name already exists' }));
+      } else {
+        setError(`Project creation failed: ${msg}`);
+      }
+    } finally {
+      setFormLoading(false);
+    }
+  };
+
+  const handleDeleteProject = async (projectId) => {
+    if (!window.confirm('Delete this project?')) return;
+    setFormLoading(true);
+    try {
+      await api.deleteProject(projectId);
+      await loadAdminData();
+      window.alert('Project deleted successfully.');
+    } catch (err) {
+      setError(`Failed to delete project: ${err.message || String(err)}`);
+    } finally {
+      setFormLoading(false);
+    }
+  };
+
+  const handleDeleteUser = async (userId) => {
+    if (!window.confirm('Delete this user?')) return;
+    setFormLoading(true);
+    try {
+      await api.deleteUser(userId);
+      await loadAdminData();
+      window.alert('User deleted successfully.');
+    } catch (err) {
+      setError(`Failed to delete user: ${err.message || String(err)}`);
+    } finally {
+      setFormLoading(false);
+    }
+  };
+
+  const handleSaveUser = async (e) => {
+    e.preventDefault();
+    if (!editingUser || !editingUserOriginal) return;
+
+    setError('');
+    setFormLoading(true);
+
+    const updates = [];
+    const detailsChanged = editingUser.name !== editingUserOriginal.name || editingUser.email !== editingUserOriginal.email;
+    const roleChanged = editingUser.role !== editingUserOriginal.role;
+
+    try {
+      if (detailsChanged) {
+        updates.push(api.updateUserDetails(editingUser.id, {
+          id: editingUser.id,
+          name: editingUser.name,
+          email: editingUser.email,
+          role: editingUserOriginal.role,
+        }));
+      }
+
+      if (roleChanged) {
+        updates.push(api.updateUserRole(editingUser.id, editingUser.role));
+      }
+
+      if (updates.length === 0) {
+        window.alert('No changes to save.');
+      } else {
+        await Promise.all(updates);
+        await loadAdminData();
+        setEditingUser(null);
+        setEditingUserOriginal(null);
+        window.alert('User updated successfully.');
+      }
+    } catch (err) {
+      setError(`Failed to update user: ${err.message || String(err)}`);
     } finally {
       setFormLoading(false);
     }
@@ -75,6 +219,10 @@ export default function AdminDashboard({ onLogout }) {
           </button>
           <button onClick={() => setActiveTab('projects')} className={`w-full flex items-center gap-3 px-3 py-2.5 text-xs rounded-xl ${activeTab === 'projects' ? 'bg-blue-900/30 text-blue-400 border border-blue-800' : 'text-slate-400 hover:text-white'}`}>
             <FolderGit2 className="w-4 h-4" /> System Projects ({projects.length})
+          </button>
+          {/* אורית */}
+          <button onClick={() => setActiveTab('create-project')} className={`w-full flex items-center gap-3 px-3 py-2.5 text-xs rounded-xl ${activeTab === 'create-project' ? 'bg-blue-900/30 text-blue-400 border border-blue-800' : 'text-slate-400 hover:text-white'}`}>
+            <FolderGit2 className="w-4 h-4" /> Create New Project
           </button>
           <button onClick={() => setActiveTab('create-user')} className={`w-full flex items-center gap-3 px-3 py-2.5 text-xs rounded-xl ${activeTab === 'create-user' ? 'bg-blue-900/30 text-blue-400 border border-blue-800' : 'text-slate-400 hover:text-white'}`}>
             <UserPlus className="w-4 h-4" /> Register Account
@@ -116,8 +264,11 @@ export default function AdminDashboard({ onLogout }) {
                     <td className="p-4 text-slate-400">{u.email}</td>
                     <td className="p-4"><span className="px-2 py-1 bg-blue-900/20 text-blue-300 rounded text-[10px]">{u.role}</span></td>
                     <td className="p-4 flex justify-center gap-3">
-                      <button className="text-blue-400 hover:text-blue-200"><Edit2 className="w-4 h-4" /></button>
-                      <button className="text-red-400 hover:text-red-200"><Trash2 className="w-4 h-4" /></button>
+                      <button onClick={() => {
+                        setEditingUser({ ...u });
+                        setEditingUserOriginal({ ...u });
+                      }} className="text-blue-400 hover:text-blue-200"><Edit2 className="w-4 h-4" /></button>
+                      <button onClick={() => handleDeleteUser(u.id)} className="text-red-400 hover:text-red-200"><Trash2 className="w-4 h-4" /></button>
                     </td>
                   </tr>
                 ))}
@@ -137,7 +288,7 @@ export default function AdminDashboard({ onLogout }) {
                 </div>
                 <div className="flex gap-3">
                   <button className="text-blue-400 hover:text-white"><Edit2 className="w-4 h-4" /></button>
-                  <button className="text-red-400 hover:text-white"><Trash2 className="w-4 h-4" /></button>
+                  <button onClick={() => handleDeleteProject(p.id)} className="text-red-400 hover:text-white"><Trash2 className="w-4 h-4" /></button>
                 </div>
               </div>
             ))}
@@ -148,6 +299,11 @@ export default function AdminDashboard({ onLogout }) {
         {activeTab === 'create-user' && (
           <form onSubmit={handleCreateUser} className="bg-[#0a0f1a] border border-blue-900/30 p-8 rounded-2xl max-w-lg space-y-4">
             <h3 className="font-bold mb-4">Register New Identity</h3>
+            {userError && (
+              <div className="rounded-xl bg-red-500/10 border border-red-400/30 p-3 text-red-300 text-base">
+                {userError}
+              </div>
+            )}
             <input className="w-full bg-[#040812] border border-blue-900/50 p-3 rounded-xl text-sm" placeholder="Full Name" onChange={(e) => setNewUser({...newUser, name: e.target.value})} />
             <input className="w-full bg-[#040812] border border-blue-900/50 p-3 rounded-xl text-sm" placeholder="Email" onChange={(e) => setNewUser({...newUser, email: e.target.value})} />
             <select className="w-full bg-[#040812] border border-blue-900/50 p-3 rounded-xl text-sm" onChange={(e) => setNewUser({...newUser, role: e.target.value})}>
@@ -157,6 +313,124 @@ export default function AdminDashboard({ onLogout }) {
             </select>
             <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-500">Create Account</Button>
           </form>
+        )}
+        
+
+        {/* Create Project Form */}
+        {activeTab === 'create-project' && (
+          <form onSubmit={handleCreateProject} className="bg-[#0a0f1a] border border-blue-900/30 p-8 rounded-2xl max-w-lg space-y-4">
+            <h3 className="font-bold mb-4">Create New Project</h3>
+            {formSuccess && (
+              <div className="rounded-xl bg-emerald-500/10 border border-emerald-400/30 p-3 text-emerald-300 text-base">
+                {formSuccess}
+              </div>
+            )}
+            {error && (
+              <div className="rounded-xl bg-red-500/10 border border-red-400/30 p-3 text-red-300 text-base">
+                {error}
+              </div>
+            )}
+            <div>
+              <input
+                className={`w-full bg-[#040812] border p-3 rounded-xl text-sm ${projectErrors.name ? 'border-red-500/70' : 'border-blue-900/50'}`}
+                placeholder="Project Name"
+                value={newProject.name}
+                onChange={(e) => setNewProject({ ...newProject, name: e.target.value })}
+              />
+              {projectErrors.name && <p className="mt-2 text-sm text-red-300">{projectErrors.name}</p>}
+            </div>
+
+            {/* שליפת מנהלים זמינים ליצירת פרויקט חדש - אורית */}
+            <div>
+              <select
+                className={`w-full bg-[#040812] border p-3 rounded-xl text-sm ${projectErrors.managerId ? 'border-red-500/70 text-white' : 'border-blue-900/50 text-slate-300'}`}
+                value={newProject.managerId}
+                onChange={(e) => setNewProject({ ...newProject, managerId: e.target.value })}
+              >
+                <option value="">-- Select Manager --</option>
+                {managers.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.name} (#{m.id})
+                  </option>
+                ))}
+              </select>
+              {projectErrors.managerId && <p className="mt-2 text-sm text-red-300">{projectErrors.managerId}</p>}
+            </div>
+
+            <div>
+              <input
+                className={`w-full bg-[#040812] border p-3 rounded-xl text-sm ${projectErrors.gitUrl ? 'border-red-500/70' : 'border-blue-900/50'}`}
+                placeholder="Git URL"
+                value={newProject.gitUrl}
+                onChange={(e) => setNewProject({ ...newProject, gitUrl: e.target.value })}
+              />
+              {projectErrors.gitUrl && <p className="mt-2 text-sm text-red-300">{projectErrors.gitUrl}</p>}
+            </div>
+            <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-500" disabled={formLoading}>
+              {formLoading ? 'Creating...' : 'Create Project'}
+            </Button>
+          </form>
+        )}
+
+        {editingUser && (
+          <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+            <form onSubmit={handleSaveUser} className="w-full max-w-md bg-[#0a0f1a] border border-blue-900/30 rounded-3xl p-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-bold">Edit User</h3>
+                <button type="button" onClick={() => setEditingUser(null)} className="text-slate-400 hover:text-white">Cancel</button>
+              </div>
+              {error && (
+                <div className="rounded-xl bg-red-500/10 border border-red-400/30 p-3 text-red-300 text-sm">
+                  {error}
+                </div>
+              )}
+              <div>
+                <label className="text-xs text-slate-400 mb-2 block">Full Name</label>
+                <input
+                  className="w-full bg-[#040812] border border-blue-900/50 p-3 rounded-xl text-sm"
+                  value={editingUser.name || ''}
+                  onChange={(e) => {
+                    setError('');
+                    setEditingUser({ ...editingUser, name: e.target.value });
+                  }}
+                />
+              </div>
+              <div>
+                <label className="text-xs text-slate-400 mb-2 block">Email</label>
+                <input
+                  className="w-full bg-[#040812] border border-blue-900/50 p-3 rounded-xl text-sm"
+                  value={editingUser.email || ''}
+                  onChange={(e) => {
+                    setError('');
+                    setEditingUser({ ...editingUser, email: e.target.value });
+                  }}
+                />
+              </div>
+              <div>
+                <label className="text-xs text-slate-400 mb-2 block">Role</label>
+                <select
+                  className="w-full bg-[#040812] border border-blue-900/50 p-3 rounded-xl text-sm"
+                  value={editingUser.role || 'Employee'}
+                  onChange={(e) => {
+                    setError('');
+                    setEditingUser({ ...editingUser, role: e.target.value });
+                  }}
+                >
+                  <option value="Employee">Employee</option>
+                  <option value="Manager">Manager</option>
+                  <option value="Admin">Admin</option>
+                </select>
+              </div>
+              <div className="flex gap-3">
+                <Button type="submit" className="flex-1 bg-blue-600 hover:bg-blue-500" disabled={formLoading}>
+                  {formLoading ? 'Saving...' : 'Save User'}
+                </Button>
+                <Button type="button" onClick={() => setEditingUser(null)} className="flex-1 bg-slate-700 hover:bg-slate-600">
+                  Close
+                </Button>
+              </div>
+            </form>
+          </div>
         )}
       </main>
     </div>

@@ -66,7 +66,6 @@ public class ProjectService {
             }
         }
 
-
         // 3. בדיקת כפילות שם
         if (projectRepository.existsByName(project.getName())) {
             throw new RuntimeException("Project with name '" + project.getName() + "' already exists.");
