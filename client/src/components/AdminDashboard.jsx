@@ -23,7 +23,9 @@ export default function AdminDashboard({ onLogout }) {
   const [managers, setManagers] = useState([]);
   const [editingUser, setEditingUser] = useState(null);
   const [editingUserOriginal, setEditingUserOriginal] = useState(null);
-
+  const [editingProject, setEditingProject] = useState(null);
+  const [editingProjectErrors, setEditingProjectErrors] = useState({ name: '', managerId: '', gitUrl: '' });
+  const [editingProjectLoading, setEditingProjectLoading] = useState(false);
 
   useEffect(() => {
     loadAdminData();
@@ -135,6 +137,62 @@ export default function AdminDashboard({ onLogout }) {
       setError(`Failed to delete project: ${err.message || String(err)}`);
     } finally {
       setFormLoading(false);
+    }
+  };
+
+  const openEditProjectModal = (project) => {
+    setError('');
+    setEditingProject({
+      ...project,
+      managerId: project.managerId != null ? String(project.managerId) : '',
+    });
+    setEditingProjectErrors({ name: '', managerId: '', gitUrl: '' });
+  };
+
+  const closeEditProjectModal = () => {
+    setEditingProject(null);
+  };
+
+  const handleSaveProject = async (e) => {
+    e.preventDefault();
+    if (!editingProject) return;
+
+    setError('');
+    setFormSuccess('');
+    setEditingProjectErrors({ name: '', managerId: '', gitUrl: '' });
+
+    if (!editingProject.name.trim()) {
+      setEditingProjectErrors((prev) => ({ ...prev, name: 'Project name is required' }));
+      return;
+    }
+
+    if (!editingProject.managerId) {
+      setEditingProjectErrors((prev) => ({ ...prev, managerId: 'Manager selection is required' }));
+      return;
+    }
+
+    if (!editingProject.gitUrl.trim() || !isValidUrl(editingProject.gitUrl.trim())) {
+      setEditingProjectErrors((prev) => ({ ...prev, gitUrl: 'Invalid Git URL' }));
+      return;
+    }
+
+    setEditingProjectLoading(true);
+    try {
+      const payload = {
+        id: editingProject.id,
+        name: editingProject.name.trim(),
+        managerId: Number(editingProject.managerId),
+        gitUrl: editingProject.gitUrl.trim(),
+      };
+      await api.updateProject(payload);
+      setFormSuccess(`Project [${editingProject.name}] updated successfully.`);
+      await loadAdminData();
+      closeEditProjectModal();
+      setTimeout(() => setFormSuccess(''), 3000);
+    } catch (err) {
+      setError(`Project update failed: ${err.message || String(err)}`);
+    } finally {
+      setEditingProjectLoading(false);
     }
   };
 
@@ -287,7 +345,7 @@ export default function AdminDashboard({ onLogout }) {
                   <p className="text-xs text-slate-400">ID: {p.id}</p>
                 </div>
                 <div className="flex gap-3">
-                  <button className="text-blue-400 hover:text-white"><Edit2 className="w-4 h-4" /></button>
+                  <button onClick={() => openEditProjectModal(p)} className="text-blue-400 hover:text-white"><Edit2 className="w-4 h-4" /></button>
                   <button onClick={() => handleDeleteProject(p.id)} className="text-red-400 hover:text-white"><Trash2 className="w-4 h-4" /></button>
                 </div>
               </div>
@@ -370,6 +428,63 @@ export default function AdminDashboard({ onLogout }) {
               {formLoading ? 'Creating...' : 'Create Project'}
             </Button>
           </form>
+        )}
+
+        {editingProject && (
+          <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+            <form onSubmit={handleSaveProject} className="w-full max-w-md bg-[#0a0f1a] border border-blue-900/30 rounded-3xl p-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-bold">Update Project</h3>
+                <button type="button" onClick={closeEditProjectModal} className="text-slate-400 hover:text-white">Cancel</button>
+              </div>
+              {error && (
+                <div className="rounded-xl bg-red-500/10 border border-red-400/30 p-3 text-red-300 text-sm">
+                  {error}
+                </div>
+              )}
+              <div>
+                <input
+                  className={`w-full bg-[#040812] border p-3 rounded-xl text-sm ${editingProjectErrors.name ? 'border-red-500/70' : 'border-blue-900/50'}`}
+                  value={editingProject.name || ''}
+                  onChange={(e) => setEditingProject({ ...editingProject, name: e.target.value })}
+                  placeholder="Project Name"
+                />
+                {editingProjectErrors.name && <p className="mt-2 text-sm text-red-300">{editingProjectErrors.name}</p>}
+              </div>
+              <div>
+                <select
+                  className={`w-full bg-[#040812] border p-3 rounded-xl text-sm ${editingProjectErrors.managerId ? 'border-red-500/70 text-white' : 'border-blue-900/50 text-slate-300'}`}
+                  value={editingProject.managerId || ''}
+                  onChange={(e) => setEditingProject({ ...editingProject, managerId: e.target.value })}
+                >
+                  <option value="">-- Select Manager --</option>
+                  {managers.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.name} (#{m.id})
+                    </option>
+                  ))}
+                </select>
+                {editingProjectErrors.managerId && <p className="mt-2 text-sm text-red-300">{editingProjectErrors.managerId}</p>}
+              </div>
+              <div>
+                <input
+                  className={`w-full bg-[#040812] border p-3 rounded-xl text-sm ${editingProjectErrors.gitUrl ? 'border-red-500/70' : 'border-blue-900/50'}`}
+                  value={editingProject.gitUrl || ''}
+                  onChange={(e) => setEditingProject({ ...editingProject, gitUrl: e.target.value })}
+                  placeholder="Git URL"
+                />
+                {editingProjectErrors.gitUrl && <p className="mt-2 text-sm text-red-300">{editingProjectErrors.gitUrl}</p>}
+              </div>
+              <div className="flex gap-3">
+                <Button type="submit" className="flex-1 bg-blue-600 hover:bg-blue-500" disabled={editingProjectLoading}>
+                  {editingProjectLoading ? 'Saving...' : 'Update Project'}
+                </Button>
+                <Button type="button" onClick={closeEditProjectModal} className="flex-1 bg-slate-700 hover:bg-slate-600">
+                  Close
+                </Button>
+              </div>
+            </form>
+          </div>
         )}
 
         {editingUser && (

@@ -352,7 +352,25 @@ async getAvailableManagers() {
 
     return responseText;
   },
+async getMyWorkers() {
+  const token = localStorage.getItem('token');
   
+  // הכתובת המלאה תהיה: http://localhost:8080/api/projects/my-workers
+  const response = await fetch(`${API_BASE_URL}/projects/my-workers`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    }
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(errorText || 'Failed to fetch my workers');
+  }
+
+  return response.json();
+},
   // ────────────────────────────────────────────────────────
 };
 

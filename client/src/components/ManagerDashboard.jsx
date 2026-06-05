@@ -1,3 +1,6 @@
+
+
+
 import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import { Button } from './ui/button';
@@ -22,18 +25,16 @@ import {
 export default function ManagerDashboard({ onLogout }) {
   const [activeTab, setActiveTab] = useState('infrastructure');
   const [projects, setProjects] = useState([]);
-  const [projectWorkers, setProjectWorkers] = useState([]);
+  const [projectWorkers, setProjectWorkers] = useState([]); // כאן נשמור את רשימת העובדים הישירה
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   
-  // States לפעולות השיוך
   const [availableEmployees, setAvailableEmployees] = useState([]); 
   const [selectedProject, setSelectedProject] = useState('');
   const [selectedWorker, setSelectedWorker] = useState('');
   const [assignLoading, setAssignLoading] = useState(false);
   const [assignSuccess, setAssignSuccess] = useState('');
 
-  // States לעריכת פרויקט URL
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [projectToEdit, setProjectToEdit] = useState(null);
   const [newGitUrl, setNewGitUrl] = useState('');
@@ -50,37 +51,32 @@ export default function ManagerDashboard({ onLogout }) {
     setLoading(true);
     setError('');
     try {
+      // 1. טעינת הפרויקטים
       const projectsData = await api.getProjects();
       setProjects(projectsData || []);
+      setEnvironmentsByProject({});
 
-      const extractedWorkers = [];
-      const seenIds = new Set();
-      
-      if (projectsData && Array.isArray(projectsData)) {
-        projectsData.forEach(project => {
-          if (project.workers && Array.isArray(project.workers)) {
-            project.workers.forEach(w => {
-              if (!seenIds.has(w.id)) {
-                seenIds.add(w.id);
-                extractedWorkers.push({ ...w, projectName: project.name });
-              }
-            });
-          } else if (project.worker && project.worker.id) {
-            if (!seenIds.has(project.worker.id)) {
-              seenIds.add(project.worker.id);
-              extractedWorkers.push({ ...project.worker, projectName: project.name });
-            }
-          }
-        });
+      // 2. טעינת העובדים של המנהל ישירות מהשרת (הפונקציה החדשה שיצרנו)
+      try {
+        const workers = await api.getMyWorkers(); 
+        setProjectWorkers(workers || []);
+      } catch (e) {
+        console.error("Could not fetch project workers", e);
       }
-      setProjectWorkers(extractedWorkers);
-
+      
+      // 3. טעינת עובדים פנויים לבחירה (ה-Pool הכללי)
       try {
         const empData = await api.getAvailableEmployees();
         setAvailableEmployees(empData || []);
       } catch (e) {
-        console.error("Could not fetch global employee pool from Backend", e);
+        console.error("Could not fetch global employee pool", e);
       }
+
+      // 4. רענון סביבות לפרויקטים שמורחבים כרגע
+      const expandedIds = Object.entries(expandedProjects)
+        .filter(([_, expanded]) => expanded)
+        .map(([projectId]) => Number(projectId));
+      await Promise.all(expandedIds.map((projectId) => loadEnvironments(projectId)));
 
     } catch (err) {
       setError(err.message);
@@ -99,9 +95,25 @@ export default function ManagerDashboard({ onLogout }) {
     }
   };
 
+  const refreshExpandedEnvironments = async () => {
+    const expandedIds = Object.entries(expandedProjects)
+      .filter(([_, expanded]) => expanded)
+      .map(([projectId]) => Number(projectId));
+
+    await Promise.all(expandedIds.map((projectId) => loadEnvironments(projectId)));
+  };
+
+  useEffect(() => {
+    if (activeTab !== 'infrastructure') return;
+    const interval = setInterval(() => {
+      refreshExpandedEnvironments();
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [activeTab, expandedProjects]);
+
   const toggleProject = async (projectId) => {
     const isExpanded = expandedProjects[projectId];
-    if (!isExpanded && !environmentsByProject[projectId]) {
+    if (!isExpanded) {
       await loadEnvironments(projectId);
     }
     setExpandedProjects((prev) => ({ ...prev, [projectId]: !isExpanded }));
@@ -154,12 +166,6 @@ export default function ManagerDashboard({ onLogout }) {
       closeEditModal();
       alert('Project Git URL updated successfully.');
       await loadDashboardData();
-      try {
-        const updatedProject = await api.getProject(projectId);
-        console.log('Updated project after assignment:', updatedProject);
-      } catch (e) {
-        console.warn('Could not fetch single project after assignment', e);
-      }
     } catch (err) {
       alert(`Update failed: ${err.message}`);
     } finally {
@@ -178,10 +184,8 @@ export default function ManagerDashboard({ onLogout }) {
     try {
       const projectId = Number(selectedProject);
       const workerId = Number(selectedWorker);
-      console.log('Assigning worker to project', { projectId, workerId });
-      const responseMessage = await api.assignWorkerToProject(projectId, workerId);
-      console.log('Assignment response:', responseMessage);
-      setAssignSuccess(responseMessage || 'Worker node successfully mounted to project cluster.');
+      await api.assignWorkerToProject(projectId, workerId);
+      setAssignSuccess('Worker node successfully mounted to project cluster.');
       setSelectedProject('');
       setSelectedWorker('');
       setTimeout(() => setAssignSuccess(''), 3000);
@@ -265,9 +269,8 @@ export default function ManagerDashboard({ onLogout }) {
                 {projects.map((project) => {
                   const isExpanded = expandedProjects[project.id];
                   const envs = environmentsByProject[project.id] || [];
-                  const visibleEnvs = envs.filter((e) => e && e.status != null);
-                  const runningEnvs = visibleEnvs.filter((e) => String(e.status || '').toUpperCase() === 'RUNNING');
-
+                  const visibleEnvs = envs.filter((e) => e);
+                  
                   return (
                     <div key={project.id} className="border border-slate-900 bg-[#0c0d19]/60 rounded-xl overflow-hidden transition-all">
                       <div className="p-4 flex items-center justify-between gap-4">
@@ -369,7 +372,7 @@ export default function ManagerDashboard({ onLogout }) {
                       <h4 className="text-xs font-bold text-white font-mono">{worker.name}</h4>
                       <p className="text-[11px] text-slate-400 font-mono mt-0.5">{worker.email}</p>
                       <div className="mt-3 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-indigo-950/40 border border-indigo-900/30 text-[10px] font-mono text-indigo-400">
-                        <Server className="w-3 h-3" /> Stack: {worker.projectName || 'Assigned'}
+                        <Server className="w-3 h-3" /> Active Member
                       </div>
                     </div>
                   </div>
@@ -462,7 +465,6 @@ export default function ManagerDashboard({ onLogout }) {
             </div>
           </div>
         )}
-
       </main>
 
       {/* ─── EDIT PROJECT URL MODAL ─── */}
@@ -523,7 +525,6 @@ export default function ManagerDashboard({ onLogout }) {
           </div>
         </div>
       )}
-
     </div>
   );
 }

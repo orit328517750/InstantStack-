@@ -1,5 +1,6 @@
 package com.example.instantstack.controller;
 
+import com.example.instantstack.entities.AppUser;
 import com.example.instantstack.entities.Environment;
 import com.example.instantstack.entities.Project;
 import com.example.instantstack.service.ProjectService;
@@ -85,5 +86,9 @@ public class ProjectController {
         Project project = projectService.getProjectByID(projectId);
         List<Environment> envs = projectService.getEnvironmentsByProject(project);
         return ResponseEntity.ok(envs);
+    }
+    @GetMapping("/my-workers")
+    public ResponseEntity<List<AppUser>> getMyWorkers() {
+        return ResponseEntity.ok(projectService.getWorkersOfCurrentManager());
     }
 }

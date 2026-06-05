@@ -1154,3 +1154,15 @@ java.sql.SQLClientInfoException: Client info name 'ApplicationName' not supporte
 	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144)
 	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
 	at java.base/java.lang.Thread.run(Thread.java:1583)
+2026-06-05 11:17:42.191583+03:00 jdbc[15]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Table "HTE_APP_USER" already exists; SQL statement:
+create global temporary table HTE_app_user(rn_ integer not null, id bigint, email varchar(255), name varchar(255), password varchar(255), role enum ('Admin','Employee','Manager'), primary key (rn_)) transactional [42101-240]
+2026-06-05 11:17:45.479295+03:00 jdbc[25]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Table "HTE_APP_USER" already exists; SQL statement:
+create global temporary table HTE_app_user(rn_ integer not null, id bigint, email varchar(255), name varchar(255), password varchar(255), role enum ('Admin','Employee','Manager'), primary key (rn_)) transactional [42101-240]
+2026-06-05 11:18:02.074093+03:00 jdbc[35]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Table "HTE_APP_USER" already exists; SQL statement:
+create global temporary table HTE_app_user(rn_ integer not null, id bigint, email varchar(255), name varchar(255), password varchar(255), role enum ('Admin','Employee','Manager'), primary key (rn_)) transactional [42101-240]
+2026-06-05 11:18:05.490956+03:00 jdbc[45]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Table "HTE_APP_USER" already exists; SQL statement:
+create global temporary table HTE_app_user(rn_ integer not null, id bigint, email varchar(255), name varchar(255), password varchar(255), role enum ('Admin','Employee','Manager'), primary key (rn_)) transactional [42101-240]
