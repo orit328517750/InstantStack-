@@ -43,5 +43,10 @@ public class EnvironmentController {
         return ResponseEntity.ok("Environment " + environmentId + " updated successfully");
     }
 
-
+    @PatchMapping("/{envId}/status")
+    @PreAuthorize("hasAnyRole('Admin', 'Manager', 'Employee')")
+    public ResponseEntity<String> updateStatus(@PathVariable Long envId, @RequestParam String status) {
+        environmentService.updateStatus(envId, Environment.Status.valueOf(status));
+        return ResponseEntity.ok("Status updated");
+    }
 }

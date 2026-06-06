@@ -187,8 +187,8 @@ export default function Dashboard({ onLogout }) {
   const handleSendToManager = async () => {
     if (!currentEnv) return;
     try {
-      const updateData = { ...currentEnv, status: 'RUNNING' };
-      await api.updateEnvironment(currentEnv.id, updateData);
+      // const updateData = { ...currentEnv, status: 'RUNNING' };
+      await api.updateEnvironmentStatus(currentEnv.id, 'RUNNING');
       
       showNotification("הסביבה נשלחה למנהל בהצלחה!", 'success');
       setCurrentEnv(null);

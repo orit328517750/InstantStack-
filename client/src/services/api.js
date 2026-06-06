@@ -206,6 +206,9 @@ async getAvailableManagers() {
   async createEnvironment(projectId, workerId) {
     const token = localStorage.getItem('token');
     const url = `${API_BASE_URL}/projects/${projectId}/environments?workerId=${workerId}`;
+//אורית
+    console.log('URL:', url); // בדוק שה-projectId תקין
+    console.log('token:', token); // בדוק שהטוקן קיים
 
     const response = await fetch(url, {
       method: 'POST',
@@ -213,12 +216,19 @@ async getAvailableManagers() {
         'Authorization': `Bearer ${token}`,
       },
     });
+      //אורית
+        console.log('response status:', response.status);
+
 
     if (!response.ok) {
       throw new Error(`Failed to create environment. Status: ${response.status}`);
     }
 
-    return response.json();
+    //אורית
+    // return response.json();
+     const data = await response.json();
+    console.log('environment returned:', data); // הוסף כאן
+    return data;
   },
 
   async updateEnvironment(envId, data) {
@@ -242,6 +252,15 @@ async getAvailableManagers() {
       return { message: textData };
     }
   },
+
+  async updateEnvironmentStatus(envId, status) {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`${API_BASE_URL}/environments/${envId}/status?status=${status}`, {
+        method: 'PATCH',
+        headers: { 'Authorization': `Bearer ${token}` },
+    });
+    if (!response.ok) throw new Error(`Failed to update status. Status: ${response.status}`);
+},
   
 
   async getProjectEnvironments(projectId) {
