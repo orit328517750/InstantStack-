@@ -446,7 +446,7 @@
 //}
 
 ////דרך של אפרת//////////
-        package com.example.instantstack.service;
+package com.example.instantstack.service;
 
 import com.example.instantstack.entities.AppUser;
 import com.example.instantstack.entities.Environment;
@@ -458,6 +458,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import jakarta.annotation.PostConstruct;
+
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -474,7 +475,6 @@ public class EnvironmentService {
 
     @Autowired
     private AppUserService appUserService;
-
 
 
     @PostConstruct
@@ -644,8 +644,7 @@ public class EnvironmentService {
                     .append("COPY ").append(relativePath.isEmpty() ? "." : relativePath).append("/target/*.jar app.jar\n")
                     .append("ENTRYPOINT [\"java\", \"-jar\", \"/app.jar\"]\n");
             System.out.println("[InstantStack] Auto-detected: Standalone Java project.");
-        }
-        else if (nodePackage != null) {
+        } else if (nodePackage != null) {
             String relativePath = getRelativePath(projectDir, nodePackage);
             dockerContent.append("FROM node:20-alpine\n")
                     .append("WORKDIR /app\n")
@@ -656,8 +655,7 @@ public class EnvironmentService {
                     .append("ENV CI=true\n")
                     .append("CMD [\"npm\", \"start\", \"--\", \"--host\", \"0.0.0.0\"]\n");
             System.out.println("[InstantStack] Auto-detected: Standalone Angular/React project.");
-        }
-        else {
+        } else {
             // ברירת מחדל לאתר סטטי
             File foundHtmlDir = searchForIndexHtml(projectDir);
             String relativePath = foundHtmlDir != null ? getRelativePath(projectDir, foundHtmlDir) : ".";
@@ -671,6 +669,7 @@ public class EnvironmentService {
 
         Files.writeString(dockerfile.toPath(), dockerContent.toString());
     }    // פונקציית עזר קטנה לחשב נתיב יחסי
+
     private String getRelativePath(File rootDir, File targetFile) {
         File targetDir = targetFile.isDirectory() ? targetFile : targetFile.getParentFile();
         String relative = rootDir.toURI().relativize(targetDir.toURI()).getPath();
@@ -880,7 +879,9 @@ public class EnvironmentService {
             }
         }
         return null;
-    }    /**
+    }
+
+    /**
      * 4. פונקציית סריקה רקורסיבית לאיתור קובץ index.html עבור אתרים סטטיים
      */
     private File searchForIndexHtml(File dir) {
@@ -989,8 +990,7 @@ public class EnvironmentService {
                 if (!env.getWorkerId().equals(currentUser.getId())) {
                     throw new AuthException("Access Denied: You can only delete your own environments.");
                 }
-            }
-            else if (currentUser.getRole() == AppUser.Role.Manager) {
+            } else if (currentUser.getRole() == AppUser.Role.Manager) {
                 if (env.getProject() != null && !env.getProject().getManagerId().equals(currentUser.getId())) {
                     throw new AuthException("Access Denied: You can only delete environments from your own projects.");
                 }
@@ -1018,7 +1018,6 @@ public class EnvironmentService {
         environmentRepository.delete(env);
         System.out.println("Environment " + id + " was successfully deleted from DB and Docker.");
     }
-
 
 
     public void updateEnvironment(Long id, Environment envDetails) {

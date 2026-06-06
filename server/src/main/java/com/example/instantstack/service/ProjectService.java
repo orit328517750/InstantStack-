@@ -170,4 +170,22 @@ public class ProjectService {
         projectRepository.save(project);
     }
 
+    @Autowired
+    private AppUserRepository appUserRepository; // וודאי שזה קיים ב-ProjectService
+
+    public List<AppUser> getWorkersOfCurrentManager() {
+        AppUser currentUser = appUserService.getCurrentUser();
+
+        // 1. קבלת כל הפרויקטים של המנהל הנוכחי
+        List<Project> myProjects = projectRepository.findByManagerId(currentUser.getId());
+
+        // 2. איסוף כל ה-IDs של העובדים לתוך קבוצה (Set) כדי למנוע כפילויות
+        java.util.Set<Long> workerIds = new java.util.HashSet<>();
+        for (Project p : myProjects) {
+            workerIds.addAll(p.getWorkerIds());
+        }
+
+        // 3. שליפת כל אובייקטי העובדים מה-Repository בבת אחת
+        return appUserRepository.findAllById(workerIds);
+    }
 }
